@@ -11,6 +11,7 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
 
+
 # --------------------------------------------------------
 #   File Upload UI
 # --------------------------------------------------------
@@ -69,12 +70,12 @@ def get_indicator(param, value):
         elif 37.5 < value <= 38.5: return "orange", "Caution"
         else: return "red", "Critical"
 
-    elif "heart" in param or "hr" in param:
+    elif "heart" in param or "hr" in param or "bpm" in param or "pulse" in param:
         if 60 <= value <= 100: return "green", "Normal"
         elif 100 < value <= 120 or 50 <= value < 60: return "orange", "Caution"
         else: return "red", "Critical"
 
-    elif "spo2" in param or "oxygen" in param:
+    elif "spo2" in param or "oxygen" in param or "o2" in param:
         if value >= 95: return "green", "Normal"
         elif 90 <= value < 95: return "orange", "Caution"
         else: return "red", "Critical"
@@ -93,6 +94,7 @@ def get_indicator(param, value):
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename')]
 )
+
 def update_dashboard(contents, filename):
 
     if contents is None:
@@ -116,7 +118,7 @@ def update_dashboard(contents, filename):
     # ------------------ Indicator Cards ------------------
     cards = []
     for col in df.columns:
-        if any(x in col for x in ['temp', 'heart', 'hr', 'spo2', 'oxygen']):
+        if any(x in col for x in ['temp', 'heart', 'hr', 'spo2', 'oxygen','o2','pulse','bpm']):
             mean_val = df[col].mean()
             color, status = get_indicator(col, mean_val)
             cards.append(
@@ -139,7 +141,7 @@ def update_dashboard(contents, filename):
     lon_col  = next((c for c in df.columns if c in ['lon', 'long', 'longitude', 'lng']), None)
 
     # find physiological column for color
-    param_cols = [c for c in df.columns if any(x in c for x in ['temp', 'heart', 'hr', 'spo2', 'oxygen'])]
+    param_cols = [c for c in df.columns if any(x in c for x in ['temp', 'heart', 'hr', 'spo2', 'oxygen','o2','bpm','pulse'])]
     color_col = param_cols[0] if param_cols else None
 
     # -------- Animated Map --------
@@ -160,9 +162,16 @@ def update_dashboard(contents, filename):
             hover_data={color_col: True, "signal_status": True},
             zoom=13,
             height=550,
-            title="🌍 Animated GPS Movement with Health Status"
+            title="🌍 Animated GPS Movement with Health Status",
+            color_discrete_map={
+                "green": "green",
+                "orange": "orange",
+                "red": "red",
+                "gray": "gray"
+            }
         )
-        fig.update_traces(marker=dict(size=30))
+        fig.update_traces(marker=dict(size=20))
+        '''
         fig.add_trace(
             go.Scattermapbox(
                 lat=df[lat_col],
@@ -171,14 +180,25 @@ def update_dashboard(contents, filename):
                 line=dict(width=4,color="blue"),
                 name="Trail"
             )
+        )'''
+        for frame in fig.frames:
+            frame.layout = go.Layout(
+            mapbox=dict(
+                center=dict(
+                    lat=float(df[lat_col].iloc[0]),
+                    lon=float(df[lon_col].iloc[0])
+                ),
+                zoom=11,
+            )
         )
 
         fig.update_layout(
             mapbox_style="open-street-map",
             mapbox=dict(
                 center={"lat": df[lat_col].iloc[0], "lon": df[lon_col].iloc[0]},
-                zoom=12
-            )
+                zoom=11
+            ),
+            uirevision = 'constant'
         )
 
         fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = 300
