@@ -61,11 +61,17 @@ def parse_contents(contents, filename):
 # --------------------------------------------------------
 #   Helper: Traffic signal logic
 # --------------------------------------------------------
-def get_indicator(param, value): #decides the color of the marker and health status based on the data
+def get_indicator(param, value,series): #decides the color of the marker and health status based on the data
     if "temp" in param:
-        if 36 <= value <= 37.5: return "green", "Normal"
-        elif 37.5 < value <= 38.5: return "orange", "Caution"
-        else: return "red", "Critical"
+        if(series.mean()<50):
+            if 36 <= value <= 37.5: return "green", "Normal"
+            elif 37.5 < value <= 38.5: return "orange", "Caution"
+            else: return "red", "Critical"
+        else:
+            if 96.0 <= value <= 98.99: return "green", "Normal"
+            elif 99.0 < value <= 99.9: return "orange", "Caution"
+            else: return "red", "Critical"
+            
 
     elif "heart" in param or "hr" in param or "bpm" in param or "pulse" in param:
         if 60 <= value <= 100: return "green", "Normal"
@@ -111,11 +117,13 @@ def update_dashboard(contents, filename):
     )
 
     # ------------------ Indicator Cards ------------------
+
     cards = []
     for col in df.columns: #iterating through each column
         if any(x in col for x in ['temp', 'heart', 'hr', 'spo2', 'oxygen','o2','pulse','bpm']):
             mean_val = df[col].mean() #taking the mean
-            color, status = get_indicator(col, mean_val)   #checking color
+                    
+            color, status = get_indicator(col, mean_val,df[col])   #checking color
             cards.append(
                 dbc.Card(            #creating the card with the color and status and mean value
                     dbc.CardBody([
@@ -142,7 +150,7 @@ def update_dashboard(contents, filename):
     if lat_col and lon_col and time_col and color_col:
 
         df["signal_color"], df["signal_status"] = zip(*df.apply(
-            lambda row: get_indicator(color_col, row[color_col]), #calulating color for every row
+            lambda row: get_indicator(color_col, row[color_col],df[color_col]), #calulating color for every row
             axis=1
         ))
 
